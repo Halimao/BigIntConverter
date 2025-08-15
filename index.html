@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大数转换工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <!-- 配置Tailwind自定义颜色和字体 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-shadow {
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+            .input-focus {
+                @apply focus:ring-2 focus:ring-primary/50 focus:border-primary focus:outline-none;
+            }
+            .transition-custom {
+                @apply transition-all duration-300 ease-in-out;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 font-inter text-dark min-h-screen">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-md sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-link text-primary text-2xl"></i>
+                <h1 class="text-xl md:text-2xl font-bold text-primary">大数转换工具</h1>
+            </div>
+            <div class="text-sm text-gray-500">
+                适用于以太坊及兼容链的单位转换
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区 -->
+    <main class="container mx-auto px-4 py-8 md:py-12">
+        <!-- 介绍部分 -->
+        <section class="mb-10 text-center max-w-3xl mx-auto">
+            <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold mb-4 text-dark">
+                大数转换器
+            </h2>
+            <p class="text-gray-600 mb-6">
+                轻松在人类可读的数字与区块链智能合约使用的大整数表示之间进行转换，支持多种代币精度设置。
+            </p>
+            <div class="inline-flex items-center px-4 py-2 bg-blue-50 text-primary rounded-full text-sm">
+                <i class="fa fa-info-circle mr-2"></i>
+                <span>默认精度为18位（大多数ERC20代币使用）</span>
+            </div>
+        </section>
+
+        <!-- 转换卡片容器 -->
+        <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <!-- 普通数字转大数 -->
+            <div
+                class="bg-white rounded-xl p-6 md:p-8 card-shadow hover:shadow-lg transition-custom transform hover:-translate-y-1">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-primary mr-3">
+                        <i class="fa fa-arrow-right"></i>
+                    </div>
+                    <h3 class="text-xl font-bold">普通数字 → 大数</h3>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="normalNumber" class="block text-sm font-medium text-gray-700 mb-1">
+                            输入普通数字
+                        </label>
+                        <input type="number" id="normalNumber"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus"
+                            placeholder="例如: 1.5 或 0.0001">
+                    </div>
+
+                    <div>
+                        <label for="decimals1" class="block text-sm font-medium text-gray-700 mb-1">
+                            代币精度 (10^精度)
+                        </label>
+                        <div class="relative">
+                            <select id="decimals1"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none input-focus bg-white">
+                                <option value="18">18 (默认)</option>
+                                <option value="24">24</option>
+                                <option value="9">9</option>
+                                <option value="6">6</option>
+                            </select>
+                            <div
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                <i class="fa fa-chevron-down text-xs"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="convertToBig"
+                        class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-lg transition-custom flex items-center justify-center">
+                        <i class="fa fa-calculator mr-2"></i>
+                        转换为大数
+                    </button>
+
+                    <div class="pt-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            转换结果 (智能合约使用的大数)
+                        </label>
+                        <div class="flex">
+                            <input type="text" id="bigNumberResult"
+                                class="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-l-lg input-focus font-mono text-sm"
+                                readonly placeholder="转换结果将显示在这里">
+                            <button id="copyBigResult"
+                                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 rounded-r-lg transition-custom border border-l-0 border-gray-300">
+                                <i class="fa fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 大数转普通数字 -->
+            <div
+                class="bg-white rounded-xl p-6 md:p-8 card-shadow hover:shadow-lg transition-custom transform hover:-translate-y-1">
+                <div class="flex items-center mb-6">
+                    <div
+                        class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-secondary mr-3">
+                        <i class="fa fa-arrow-left"></i>
+                    </div>
+                    <h3 class="text-xl font-bold">大数 → 普通数字</h3>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="bigNumber" class="block text-sm font-medium text-gray-700 mb-1">
+                            输入大数
+                        </label>
+                        <input type="text" id="bigNumber"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus font-mono text-sm"
+                            placeholder="例如: 1500000000000000000">
+                    </div>
+
+                    <div>
+                        <label for="decimals2" class="block text-sm font-medium text-gray-700 mb-1">
+                            代币精度 (10^精度)
+                        </label>
+                        <div class="relative">
+                            <select id="decimals2"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none input-focus bg-white">
+                                <option value="18">18 (默认)</option>
+                                <option value="24">24</option>
+                                <option value="9">9</option>
+                                <option value="6">6</option>
+                            </select>
+                            <div
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                <i class="fa fa-chevron-down text-xs"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="convertToNormal"
+                        class="w-full bg-secondary hover:bg-secondary/90 text-white font-medium py-2 px-4 rounded-lg transition-custom flex items-center justify-center">
+                        <i class="fa fa-calculator mr-2"></i>
+                        转换为普通数字
+                    </button>
+
+                    <div class="pt-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            转换结果 (人类可读数字)
+                        </label>
+                        <div class="flex">
+                            <input type="text" id="normalNumberResult"
+                                class="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-l-lg input-focus font-mono text-sm"
+                                readonly placeholder="转换结果将显示在这里">
+                            <button id="copyNormalResult"
+                                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 rounded-r-lg transition-custom border border-l-0 border-gray-300">
+                                <i class="fa fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 示例部分 -->
+        <section class="mt-12 max-w-5xl mx-auto bg-white rounded-xl p-6 md:p-8 card-shadow">
+            <h3 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fa fa-lightbulb-o text-yellow-500 mr-2"></i>
+                使用示例
+            </h3>
+
+            <div class="grid md:grid-cols-2 gap-6 text-sm">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h4 class="font-medium text-primary mb-2">普通数字转大数示例</h4>
+                    <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                        <li>输入: 1.5, 精度: 18 → 结果: 1500000000000000000</li>
+                        <li>输入: 0.001, 精度: 6 → 结果: 1000</li>
+                        <li>输入: 2.5, 精度: 9 → 结果: 2500000000</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h4 class="font-medium text-secondary mb-2">大数转普通数字示例</h4>
+                    <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                        <li>输入: 1000000000000000000, 精度: 18 → 结果: 1</li>
+                        <li>输入: 123456789, 精度: 6 → 结果: 123.456789</li>
+                        <li>输入: 500000000000000000000, 精度: 24 → 结果: 0.0005</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white py-8 mt-16">
+        <div class="container mx-auto px-4 text-center">
+            <p class="mb-2">大数转换工具 &copy; 2025</p>
+            <p class="text-sm text-gray-400">
+                一个用于区块链开发者的实用工具，简化数字单位转换流程
+            </p>
+        </div>
+    </footer>
+
+    <!-- 通知提示 -->
+    <div id="notification"
+        class="fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-custom pointer-events-none">
+        <span id="notificationText" class="text-white"></span>
+    </div>
+
+    <script>
+        // DOM元素
+        const normalNumberInput = document.getElementById('normalNumber');
+        const bigNumberInput = document.getElementById('bigNumber');
+        const decimalsSelect1 = document.getElementById('decimals1');
+        const decimalsSelect2 = document.getElementById('decimals2');
+        const convertToBigBtn = document.getElementById('convertToBig');
+        const convertToNormalBtn = document.getElementById('convertToNormal');
+        const bigNumberResult = document.getElementById('bigNumberResult');
+        const normalNumberResult = document.getElementById('normalNumberResult');
+        const copyBigResultBtn = document.getElementById('copyBigResult');
+        const copyNormalResultBtn = document.getElementById('copyNormalResult');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notificationText');
+
+        // 显示通知
+        function showNotification(message, isSuccess = true) {
+            notificationText.textContent = message;
+            notification.className = `fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg transform translate-y-0 opacity-100 transition-custom`;
+            notification.classList.add(isSuccess ? 'bg-green-500' : 'bg-red-500');
+
+            setTimeout(() => {
+                notification.classList.remove('translate-y-0', 'opacity-100');
+                notification.classList.add('translate-y-20', 'opacity-0');
+            }, 2000);
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text, successMessage) {
+            navigator.clipboard.writeText(text)
+                .then(() => showNotification(successMessage))
+                .catch(err => showNotification('复制失败: ' + err, false));
+        }
+
+        // 普通数字转大数
+        function convertToBigNumber() {
+            const normalNumber = parseFloat(normalNumberInput.value);
+            const decimals = parseInt(decimalsSelect1.value);
+
+            if (isNaN(normalNumber)) {
+                showNotification('请输入有效的数字', false);
+                return;
+            }
+
+            // 计算10的幂
+            const power = 10 ** decimals;
+
+            // 处理浮点数精度问题
+            const result = Math.round(normalNumber * power).toString();
+
+            bigNumberResult.value = result;
+            showNotification('转换成功');
+        }
+
+        // 大数转普通数字
+        function convertToNormalNumber() {
+            const bigNumberStr = bigNumberInput.value.trim();
+            const decimals = parseInt(decimalsSelect2.value);
+
+            // 验证输入是否为有效整数
+            if (!/^\d+$/.test(bigNumberStr)) {
+                showNotification('请输入有效的大数（仅包含数字）', false);
+                return;
+            }
+
+            const bigNumber = BigInt(bigNumberStr);
+            const power = BigInt(10 ** decimals);
+
+            // 计算商和余数以避免浮点数精度问题
+            const quotient = bigNumber / power;
+            const remainder = bigNumber % power;
+
+            // 处理余数部分，确保有足够的小数位
+            let remainderStr = remainder.toString().padStart(decimals, '0');
+            // 移除末尾的零
+            remainderStr = remainderStr.replace(/0+$/, '');
+
+            // 组合结果
+            let result;
+            if (remainderStr) {
+                result = `${quotient}.${remainderStr}`;
+            } else {
+                result = quotient.toString();
+            }
+
+            normalNumberResult.value = result;
+            showNotification('转换成功');
+        }
+
+        // 事件监听
+        convertToBigBtn.addEventListener('click', convertToBigNumber);
+        convertToNormalBtn.addEventListener('click', convertToNormalNumber);
+
+        copyBigResultBtn.addEventListener('click', () => {
+            if (bigNumberResult.value) {
+                copyToClipboard(bigNumberResult.value, '大数结果已复制');
+            } else {
+                showNotification('没有可复制的内容', false);
+            }
+        });
+
+        copyNormalResultBtn.addEventListener('click', () => {
+            if (normalNumberResult.value) {
+                copyToClipboard(normalNumberResult.value, '普通数字结果已复制');
+            } else {
+                showNotification('没有可复制的内容', false);
+            }
+        });
+
+        // 支持回车键触发转换
+        normalNumberInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') convertToBigNumber();
+        });
+
+        bigNumberInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') convertToNormalNumber();
+        });
+    </script>
+</body>
+
+</html>
