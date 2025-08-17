@@ -92,7 +92,7 @@
                         <label for="normalNumber" class="block text-sm font-medium text-gray-700 mb-1">
                             输入普通数字
                         </label>
-                        <input type="number" id="normalNumber"
+                        <input type="text" id="normalNumber"
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus"
                             placeholder="例如: 1.5 或 0.0001">
                     </div>
@@ -128,7 +128,7 @@
                         </label>
                         <div class="flex">
                             <input type="text" id="bigNumberResult"
-                                class="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-l-lg input-focus font-mono text-sm"
+                                class="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-l-lg input-focus font-mono text-sm overflow-x-auto"
                                 readonly placeholder="转换结果将显示在这里">
                             <button id="copyBigResult"
                                 class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 rounded-r-lg transition-custom border border-l-0 border-gray-300">
@@ -191,7 +191,7 @@
                         </label>
                         <div class="flex">
                             <input type="text" id="normalNumberResult"
-                                class="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-l-lg input-focus font-mono text-sm"
+                                class="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-l-lg input-focus font-mono text-sm overflow-x-auto"
                                 readonly placeholder="转换结果将显示在这里">
                             <button id="copyNormalResult"
                                 class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 rounded-r-lg transition-custom border border-l-0 border-gray-300">
@@ -282,21 +282,63 @@
                 .catch(err => showNotification('复制失败: ' + err, false));
         }
 
-        // 普通数字转大数
+        // 普通数字转大数 - 改进版本，避免科学计数法
         function convertToBigNumber() {
-            const normalNumber = parseFloat(normalNumberInput.value);
+            const input = normalNumberInput.value.trim();
             const decimals = parseInt(decimalsSelect1.value);
 
-            if (isNaN(normalNumber)) {
+            // 验证输入
+            if (!/^-?\d+(\.\d+)?$/.test(input)) {
                 showNotification('请输入有效的数字', false);
                 return;
             }
 
-            // 计算10的幂
-            const power = 10 ** decimals;
+            // 分割整数和小数部分
+            let [integerPart, fractionalPart = ''] = input.split('.');
 
-            // 处理浮点数精度问题
-            const result = Math.round(normalNumber * power).toString();
+            // 处理负数
+            const isNegative = integerPart.startsWith('-');
+            if (isNegative) {
+                integerPart = integerPart.slice(1);
+            }
+
+            // 确保小数部分长度不超过精度要求，不足则补零，超出则四舍五入
+            if (fractionalPart.length > decimals) {
+                // 四舍五入处理
+                const roundDigit = parseInt(fractionalPart[decimals], 10);
+                fractionalPart = fractionalPart.substring(0, decimals);
+
+                if (roundDigit >= 5) {
+                    // 转换为数字进行加1操作
+                    let num = BigInt(fractionalPart || 0) + 1n;
+                    let newFractional = num.toString().padStart(decimals, '0');
+
+                    // 如果进位导致长度超过精度，需要向整数部分进位
+                    if (newFractional.length > decimals) {
+                        fractionalPart = newFractional.substring(1);
+                        integerPart = (BigInt(integerPart || 0) + 1n).toString();
+                    } else {
+                        fractionalPart = newFractional;
+                    }
+                }
+            } else {
+                // 不足则补零
+                fractionalPart = fractionalPart.padEnd(decimals, '0');
+            }
+
+            // 组合整数和小数部分，去掉前导零
+            let result = (integerPart || '0') + fractionalPart;
+            result = result.replace(/^0+/, '');
+
+            // 如果结果为空（全是零的情况）
+            if (result === '') {
+                result = '0';
+            }
+
+            // 加上负号
+            if (isNegative) {
+                result = '-' + result;
+            }
 
             bigNumberResult.value = result;
             showNotification('转换成功');
@@ -307,30 +349,40 @@
             const bigNumberStr = bigNumberInput.value.trim();
             const decimals = parseInt(decimalsSelect2.value);
 
-            // 验证输入是否为有效整数
-            if (!/^\d+$/.test(bigNumberStr)) {
-                showNotification('请输入有效的大数（仅包含数字）', false);
+            // 验证输入是否为有效整数（允许负数）
+            if (!/^-?\d+$/.test(bigNumberStr)) {
+                showNotification('请输入有效的大数（仅包含数字和可选的负号）', false);
                 return;
             }
 
-            const bigNumber = BigInt(bigNumberStr);
-            const power = BigInt(10 ** decimals);
+            // 处理负数
+            const isNegative = bigNumberStr.startsWith('-');
+            let numStr = isNegative ? bigNumberStr.slice(1) : bigNumberStr;
 
-            // 计算商和余数以避免浮点数精度问题
-            const quotient = bigNumber / power;
-            const remainder = bigNumber % power;
+            // 确保数字长度至少为1
+            if (numStr.length === 0) {
+                numStr = '0';
+            }
 
-            // 处理余数部分，确保有足够的小数位
-            let remainderStr = remainder.toString().padStart(decimals, '0');
-            // 移除末尾的零
-            remainderStr = remainderStr.replace(/0+$/, '');
-
-            // 组合结果
+            // 根据精度处理小数点位置
             let result;
-            if (remainderStr) {
-                result = `${quotient}.${remainderStr}`;
+            if (numStr.length <= decimals) {
+                // 数字长度小于等于精度，需要在前面补零
+                result = '0.' + numStr.padStart(decimals, '0');
             } else {
-                result = quotient.toString();
+                // 数字长度大于精度，插入小数点
+                const integerPart = numStr.substring(0, numStr.length - decimals);
+                const fractionalPart = numStr.substring(numStr.length - decimals);
+                result = integerPart + '.' + fractionalPart;
+            }
+
+            // 移除小数部分末尾的零
+            result = result.replace(/\.0+$/, '');
+            result = result.replace(/(\.\d*?)0+$/, '$1');
+
+            // 加上负号
+            if (isNegative) {
+                result = '-' + result;
             }
 
             normalNumberResult.value = result;
